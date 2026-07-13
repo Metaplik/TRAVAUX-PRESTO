@@ -19,6 +19,21 @@
   body{background:var(--fond); color:var(--texte); font-family:'Inter',sans-serif; font-size:16px; min-height:100vh; padding:20px 14px 70px;}
   .wrap{max-width:480px; margin:0 auto;}
 
+  @media (min-width: 760px){
+    body{ padding:32px 24px 70px; }
+    .wrap{ max-width:760px; }
+    .card{ padding:26px 30px; }
+    header{ margin-bottom:22px; }
+    .map-box-outer{ height:min(58vh, 460px); }
+    .roles, .checks{ gap:12px; }
+  }
+  @media (min-width: 1100px){
+    .wrap{ max-width:920px; }
+    #client-view .card:not(#client-profile-card):not(#client-form-card),
+    #artisan-view .card:not(#artisan-profile-card){
+      max-width:920px;
+    }
+  }
   header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;}
   header img{height:70px; width:auto;}
   .top-actions{display:flex; gap:8px;}
@@ -1177,44 +1192,16 @@
     conn.on('close', () => { activeDataConn = null; });
   }
 
-  let peerReady = false;
-  let peerRetryCount = 0;
-
   function initPeer(){
     if(!currentUser) return;
-    peerReady = false;
     localPeer = new Peer(currentUser.uid, { debug: 0, config: PEER_CONFIG });
-
-    localPeer.on('open', () => {
-      peerReady = true;
-      peerRetryCount = 0;
-      showMsg("Connexion d'appel prête.", "ok");
-    });
     localPeer.on('call', handleIncomingPeerCall);
     localPeer.on('connection', bindDataConn);
-    localPeer.on('disconnected', () => {
-      peerReady = false;
-      showMsg("Connexion d'appel coupée, reconnexion...", "error");
-      // tentative de reconnexion automatique au serveur de signalisation
-      setTimeout(() => { if(localPeer && !localPeer.destroyed) localPeer.reconnect(); }, 1500);
-    });
     localPeer.on('error', (err) => {
-      peerReady = false;
-      showMsg("Erreur connexion d'appel : " + err.type + (err.message ? (" — " + err.message) : ""), "error");
-      if(err.type === 'unavailable-id' && peerRetryCount < 5){
-        // identifiant encore réservé par une session précédente : on réessaie après un court délai
-        peerRetryCount++;
-        try { localPeer.destroy(); } catch(e){}
-        setTimeout(initPeer, 2500);
+      if(err.type === 'unavailable-id'){
+        // déjà connecté ailleurs (autre onglet/appareil) : on ignore, l'autre session reste active
       }
     });
-  }
-
-  function ensureCallReady(){
-    if(peerReady) return true;
-    showMsg("Connexion au service d'appel en cours, réessayez dans quelques secondes.", "error");
-    if(localPeer && localPeer.destroyed){ initPeer(); }
-    return false;
   }
 
   function sendHangupSignal(){
@@ -1430,11 +1417,8 @@
   }
   function updateBellBadge(){ /* mise à jour automatique via onSnapshot */ }
 
-  document.getElementById('btn-messages').addEventListener('click', openMyMessages);
-
-  async function startCall(targetUid, targetName, type, targetPhoto){
+  document.getElementById('btn-messages').addEventListener('click', openMyMessages);  async function startCall(targetUid, targetName, type, targetPhoto){
     if(activeMediaCall){ showMsg("Vous êtes déjà en communication.", "error"); return; }
-    if(!ensureCallReady()) return;
     const callRoot = document.getElementById('call-root');
 
     callRoot.innerHTML = `
@@ -1686,6 +1670,6 @@
   }
 </script>
 
-<div style="text-align:center; font-size:10px; color:#B9C2CC; padding:14px 0 4px;">Version build : 2026-07-13-18</div>
+<div style="text-align:center; font-size:10px; color:#B9C2CC; padding:14px 0 4px;">Version build : 2026-07-13-16</div>
 </body>
 </html>
